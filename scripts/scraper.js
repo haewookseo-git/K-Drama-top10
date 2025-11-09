@@ -1,222 +1,192 @@
 /**
- * Web scraper for K-Drama rankings
+ * FlixPatrol Web Scraper for K-Drama Rankings
  * This script scrapes FlixPatrol for Netflix K-Drama top 10 data
- * and enriches it with TMDB API data
  */
 
-const axios = require('axios');
-const cheerio = require('cheerio');
+const puppeteer = require('puppeteer');
 const fs = require('fs').promises;
 const path = require('path');
-require('dotenv').config();
 
 // Configuration
 const FLIXPATROL_URL = 'https://flixpatrol.com/top10/netflix/south-korea/';
-const TMDB_API_KEY = process.env.TMDB_API_KEY || 'YOUR_TMDB_API_KEY';
-const TMDB_BASE_URL = 'https://api.themoviedb.org/3';
+const OUTPUT_PATH = path.join(__dirname, '../data/current.json');
 
 /**
  * Scrape FlixPatrol for current top 10 K-Dramas
- * Note: This is a basic implementation. FlixPatrol's structure may change.
  */
 async function scrapeFlixPatrol() {
+    console.log('🚀 Starting FlixPatrol scraper...\n');
+
+    let browser;
     try {
-        console.log('Scraping FlixPatrol...');
-        const response = await axios.get(FLIXPATROL_URL, {
-            headers: {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-            }
+        // Launch browser
+        console.log('📱 Launching browser...');
+        browser = await puppeteer.launch({
+            headless: 'new',
+            args: ['--no-sandbox', '--disable-setuid-sandbox']
         });
 
-        const $ = cheerio.load(response.data);
-        const rankings = [];
+        const page = await browser.newPage();
 
-        // NOTE: This selector is a placeholder and needs to be adjusted based on actual FlixPatrol HTML structure
-        // You'll need to inspect FlixPatrol's page to find the correct selectors
-        $('.top-list-item').each((index, element) => {
-            if (index >= 10) return false; // Only get top 10
+        // Set user agent to avoid being blocked
+        await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
 
-            const title = $(element).find('.title').text().trim();
-            // Extract more data as needed from the page structure
-
-            if (title) {
-                rankings.push({
-                    rank: index + 1,
-                    title: title
-                });
-            }
+        console.log('🌐 Navigating to FlixPatrol...');
+        await page.goto(FLIXPATROL_URL, {
+            waitUntil: 'networkidle2',
+            timeout: 60000
         });
 
-        console.log(`Found ${rankings.length} dramas`);
-        return rankings;
-    } catch (error) {
-        console.error('Error scraping FlixPatrol:', error.message);
-        throw error;
-    }
-}
+        // Wait for content to load
+        console.log('⏳ Waiting for content to load...');
+        await page.waitForSelector('.table-wrapper', { timeout: 30000 });
 
-/**
- * Search TMDB for drama details
- */
-async function searchTMDB(dramaTitle) {
-    try {
-        const response = await axios.get(`${TMDB_BASE_URL}/search/tv`, {
-            params: {
-                api_key: TMDB_API_KEY,
-                query: dramaTitle,
-                language: 'en-US'
-            }
-        });
+        console.log('📊 Extracting drama data...\n');
 
-        if (response.data.results && response.data.results.length > 0) {
-            return response.data.results[0]; // Return first result
-        }
-        return null;
-    } catch (error) {
-        console.error(`Error searching TMDB for "${dramaTitle}":`, error.message);
-        return null;
-    }
-}
+        // Extract data from the page
+        const dramas = await page.evaluate(() => {
+            const results = [];
 
-/**
- * Get detailed drama information from TMDB
- */
-async function getTMDBDetails(tmdbId) {
-    try {
-        const [detailsRes, creditsRes] = await Promise.all([
-            axios.get(`${TMDB_BASE_URL}/tv/${tmdbId}`, {
-                params: { api_key: TMDB_API_KEY, language: 'en-US' }
-            }),
-            axios.get(`${TMDB_BASE_URL}/tv/${tmdbId}/credits`, {
-                params: { api_key: TMDB_API_KEY, language: 'en-US' }
-            })
-        ]);
+            // FlixPatrol uses a table structure - adjust selectors based on actual site structure
+            // This is a generic implementation that may need adjustment
+            const rows = document.querySelectorAll('.table-wrapper table tbody tr');
 
-        const details = detailsRes.data;
-        const credits = creditsRes.data;
+            let rank = 1;
+            rows.forEach((row, index) => {
+                if (index >= 10) return; // Only top 10
 
-        // Extract cast (top 4)
-        const cast = credits.cast
-            .slice(0, 4)
-            .map(actor => actor.name);
+                try {
+                    // Extract title - adjust selector based on actual structure
+                    const titleElement = row.querySelector('.title, .show-title, td:nth-child(2) a, .top-list-item-title');
+                    const title = titleElement ? titleElement.textContent.trim() : null;
 
-        // Extract director/creator
-        const director = details.created_by && details.created_by.length > 0
-            ? details.created_by[0].name
-            : 'Unknown';
+                    if (!title) return;
 
-        return {
-            tmdbId: details.id,
-            poster: details.poster_path
-                ? `https://image.tmdb.org/t/p/w500${details.poster_path}`
-                : null,
-            description: details.overview || 'No description available.',
-            rating: details.vote_average ? parseFloat(details.vote_average.toFixed(1)) : 0,
-            releaseDate: details.first_air_date || 'Unknown',
-            episodes: details.number_of_episodes || 0,
-            director: director,
-            cast: cast
-        };
-    } catch (error) {
-        console.error(`Error getting TMDB details for ID ${tmdbId}:`, error.message);
-        return null;
-    }
-}
+                    // Extract poster/image - adjust selector based on actual structure
+                    const imgElement = row.querySelector('img, .poster img, td:nth-child(1) img');
+                    const poster = imgElement ? imgElement.src : null;
 
-/**
- * Main scraping function
- */
-async function scrapeAndBuildData() {
-    try {
-        console.log('Starting data collection...\n');
+                    // Extract Netflix URL if available
+                    const netflixLink = row.querySelector('a[href*="netflix.com"]');
+                    const netflixUrl = netflixLink ? netflixLink.href : `https://www.netflix.com/search?q=${encodeURIComponent(title)}`;
 
-        // Step 1: Scrape FlixPatrol (or use manual data)
-        // For now, we'll use a manual list since FlixPatrol scraping requires
-        // inspecting their actual HTML structure
-        console.log('Note: FlixPatrol scraping requires manual HTML inspection.');
-        console.log('Using manual title list for demonstration.\n');
+                    // Try to extract description if available
+                    const descElement = row.querySelector('.description, .synopsis, .plot');
+                    const description = descElement ? descElement.textContent.trim() : '';
 
-        const manualTitles = [
-            'The Glory',
-            'Moving',
-            'Squid Game',
-            'Crash Landing on You',
-            'My Demon',
-            'Sweet Home',
-            'Queen of Tears',
-            'Extraordinary Attorney Woo',
-            'Business Proposal',
-            'Vincenzo'
-        ];
-
-        // Step 2: Enrich with TMDB data
-        const enrichedData = [];
-
-        for (let i = 0; i < manualTitles.length; i++) {
-            const title = manualTitles[i];
-            console.log(`Processing ${i + 1}/10: ${title}`);
-
-            // Search TMDB
-            const searchResult = await searchTMDB(title);
-            if (!searchResult) {
-                console.log(`  ⚠️  TMDB search failed for "${title}"`);
-                continue;
-            }
-
-            // Get detailed info
-            const details = await getTMDBDetails(searchResult.id);
-            if (!details) {
-                console.log(`  ⚠️  Failed to get details for "${title}"`);
-                continue;
-            }
-
-            enrichedData.push({
-                rank: i + 1,
-                title: title,
-                ...details,
-                netflixUrl: `https://www.netflix.com/search?q=${encodeURIComponent(title)}`,
-                youtubeOST: '', // Needs to be manually added
-                rankChange: 0
+                    results.push({
+                        rank: rank++,
+                        title: title,
+                        poster: poster,
+                        description: description || 'No description available.',
+                        netflixUrl: netflixUrl
+                    });
+                } catch (e) {
+                    console.error(`Error processing row ${index}:`, e.message);
+                }
             });
 
-            console.log(`  ✓ Successfully processed`);
+            return results;
+        });
 
-            // Delay to respect API rate limits
-            await new Promise(resolve => setTimeout(resolve, 500));
+        console.log(`✅ Found ${dramas.length} dramas\n`);
+
+        // Display found dramas
+        dramas.forEach(drama => {
+            console.log(`${drama.rank}. ${drama.title}`);
+        });
+
+        await browser.close();
+        return dramas;
+
+    } catch (error) {
+        console.error('❌ Error scraping FlixPatrol:', error.message);
+        if (browser) await browser.close();
+        throw error;
+    }
+}
+
+/**
+ * Enrich drama data with default values
+ */
+function enrichDramaData(dramas) {
+    return dramas.map(drama => ({
+        rank: drama.rank,
+        title: drama.title,
+        tmdbId: 0, // Not using TMDB anymore
+        poster: drama.poster || 'https://via.placeholder.com/300x450?text=No+Image',
+        description: drama.description || 'No description available.',
+        rating: 0, // Will need manual update or alternative source
+        releaseDate: new Date().toISOString().split('T')[0], // Default to today
+        episodes: 0, // Will need manual update
+        director: 'Unknown',
+        cast: [],
+        netflixUrl: drama.netflixUrl,
+        youtubeOST: '', // Needs manual addition
+        rankChange: 0
+    }));
+}
+
+/**
+ * Save data to JSON file
+ */
+async function saveData(dramas) {
+    const currentMonth = new Date().toISOString().slice(0, 7); // YYYY-MM
+    const today = new Date().toISOString().split('T')[0];
+
+    const outputData = {
+        month: currentMonth,
+        lastUpdated: today,
+        rankings: dramas
+    };
+
+    await fs.writeFile(OUTPUT_PATH, JSON.stringify(outputData, null, 2));
+    console.log(`\n💾 Data saved to ${OUTPUT_PATH}`);
+    return outputData;
+}
+
+/**
+ * Main function
+ */
+async function main() {
+    try {
+        console.log('═══════════════════════════════════════');
+        console.log('  FlixPatrol K-Drama Scraper');
+        console.log('═══════════════════════════════════════\n');
+
+        // Step 1: Scrape FlixPatrol
+        const rawDramas = await scrapeFlixPatrol();
+
+        if (rawDramas.length === 0) {
+            throw new Error('No dramas found. FlixPatrol structure may have changed.');
         }
 
-        // Step 3: Save data
-        const currentMonth = new Date().toISOString().slice(0, 7); // YYYY-MM
-        const outputData = {
-            month: currentMonth,
-            lastUpdated: new Date().toISOString().split('T')[0],
-            rankings: enrichedData
-        };
+        // Step 2: Enrich with default data
+        console.log('\n🔧 Enriching data with default values...');
+        const enrichedDramas = enrichDramaData(rawDramas);
 
-        const outputPath = path.join(__dirname, '../data/current.json');
-        await fs.writeFile(outputPath, JSON.stringify(outputData, null, 2));
+        // Step 3: Save to file
+        await saveData(enrichedDramas);
 
-        console.log(`\n✓ Data saved to ${outputPath}`);
-        console.log(`✓ Collected ${enrichedData.length} dramas`);
+        console.log('\n✅ Scraping completed successfully!');
+        console.log('\n⚠️  NEXT STEPS:');
+        console.log('1. Review data/current.json');
+        console.log('2. Manually update: rating, releaseDate, episodes, director, cast');
+        console.log('3. Add YouTube OST video IDs for each drama');
+        console.log('4. Verify poster image URLs are working');
+        console.log('\n═══════════════════════════════════════\n');
 
-        return outputData;
     } catch (error) {
-        console.error('Error in main scraping function:', error);
-        throw error;
+        console.error('\n❌ Scraping failed:', error.message);
+        console.error('\n💡 TIP: FlixPatrol may have changed its HTML structure.');
+        console.error('   You may need to inspect the page and update the selectors in scraper.js');
+        process.exit(1);
     }
 }
 
 // Run if called directly
 if (require.main === module) {
-    scrapeAndBuildData()
-        .then(() => {
-            console.log('\n✓ Scraping completed successfully!');
-            process.exit(0);
-        })
-        .catch((error) => {
-            console.error('\n✗ Scraping failed:', error);
-            process.exit(1);
-        });
+    main();
 }
 
-module.exports = { scrapeAndBuildData, searchTMDB, getTMDBDetails };
+module.exports = { scrapeFlixPatrol, enrichDramaData, saveData };

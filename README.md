@@ -17,8 +17,7 @@ A modern, minimalist website displaying the top 10 Korean dramas on Netflix with
 - **Frontend**: HTML5, Tailwind CSS, Vanilla JavaScript
 - **Data Visualization**: Chart.js
 - **Media**: YouTube iframe API
-- **Data Collection**: Node.js, Axios, Cheerio
-- **External API**: TMDB (The Movie Database)
+- **Data Collection**: Node.js, Puppeteer (FlixPatrol web scraping)
 - **Deployment**: GitHub Pages
 
 ## 🚀 Getting Started
@@ -26,7 +25,7 @@ A modern, minimalist website displaying the top 10 Korean dramas on Netflix with
 ### Prerequisites
 
 - Node.js (v14 or higher)
-- A TMDB API key (free at [themoviedb.org](https://www.themoviedb.org/settings/api))
+- ~300MB disk space for Chromium (downloaded automatically by Puppeteer)
 
 ### Installation
 
@@ -36,18 +35,12 @@ git clone https://github.com/yourusername/K-Drama-top10.git
 cd K-Drama-top10
 ```
 
-2. Install dependencies:
+2. Install dependencies (includes Puppeteer and Chromium):
 ```bash
 npm install
 ```
 
-3. Set up environment variables:
-```bash
-cp .env.example .env
-# Edit .env and add your TMDB API key
-```
-
-4. Run the development server:
+3. Run the development server:
 ```bash
 npm run dev
 ```
@@ -56,22 +49,33 @@ The site will open at `http://localhost:8080`
 
 ## 📊 Data Collection
 
-### Manual Update (Recommended)
+### Automated Scraping
 
-1. Update the drama titles in `scripts/scraper.js` based on current Netflix rankings
-2. Run the scraper to fetch TMDB data:
+Run the scraper to automatically fetch data from FlixPatrol:
+
 ```bash
 npm run scrape
 ```
-3. Manually add YouTube OST video IDs to the generated `data/current.json`
-4. Archive the previous month's data to `data/history/YYYY-MM.json`
 
-### Automated Scraping (Advanced)
+**What the scraper does:**
+- Launches a headless browser using Puppeteer
+- Navigates to FlixPatrol's South Korea Netflix rankings
+- Extracts: rank, title, poster image, description, Netflix URL
+- Saves to `data/current.json`
 
-The scraper includes basic FlixPatrol scraping functionality, but requires:
-- Inspecting FlixPatrol's HTML structure
-- Updating CSS selectors in `scripts/scraper.js`
-- Potentially handling anti-scraping measures
+**What you need to do manually:**
+1. Review the generated `data/current.json`
+2. Add missing information (rating, episodes, director, cast)
+3. Add YouTube OST video IDs for each drama
+4. Calculate `rankChange` by comparing with previous month
+5. Archive previous month's data to `data/history/YYYY-MM.json`
+
+### Troubleshooting
+
+If the scraper fails:
+- FlixPatrol may have changed their HTML structure
+- Update the CSS selectors in `scripts/scraper.js` (lines 60-75)
+- Check the console output for specific error messages
 
 ## 📁 Project Structure
 
@@ -105,8 +109,8 @@ Edit `data/current.json` following this structure:
 {
   "rank": 1,
   "title": "Drama Title",
-  "tmdbId": 12345,
-  "poster": "https://image.tmdb.org/t/p/w500/...",
+  "tmdbId": 0,
+  "poster": "https://example.com/poster.jpg",
   "description": "...",
   "rating": 8.5,
   "releaseDate": "2024-01-01",
@@ -147,9 +151,8 @@ MIT License - feel free to use this project for your own purposes.
 
 ## 🙏 Acknowledgments
 
-- Data sourced from [FlixPatrol](https://flixpatrol.com/)
-- Drama information from [TMDB](https://www.themoviedb.org/)
-- This is an unofficial fan project and is not affiliated with Netflix
+- Ranking data sourced from [FlixPatrol](https://flixpatrol.com/)
+- This is an unofficial fan project and is not affiliated with Netflix or FlixPatrol
 
 ## 🤝 Contributing
 

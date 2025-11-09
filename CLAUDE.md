@@ -11,8 +11,7 @@ K-Drama Top 10 is a static website that displays Netflix's top 10 Korean dramas 
 - **Frontend**: HTML5, Tailwind CSS (CDN), Vanilla JavaScript
 - **Data Visualization**: Chart.js
 - **Media Integration**: YouTube iframe API
-- **Data Collection**: Node.js + Axios + Cheerio
-- **External API**: TMDB API for drama details
+- **Data Collection**: Node.js + Puppeteer (FlixPatrol web scraping)
 - **Deployment**: GitHub Pages (static hosting)
 
 ## Development Commands
@@ -25,17 +24,11 @@ npm install
 npm run dev
 # Opens http://localhost:8080
 
-# Scrape and update data (requires TMDB API key)
+# Scrape and update data from FlixPatrol
 npm run scrape
 
 # Note: No build process needed - this is vanilla HTML/CSS/JS
 ```
-
-## Environment Setup
-
-1. Copy `.env.example` to `.env`
-2. Get a free TMDB API key from https://www.themoviedb.org/settings/api
-3. Add your API key to `.env`: `TMDB_API_KEY=your_key_here`
 
 ## Project Structure
 
@@ -53,7 +46,7 @@ K-Drama-top10/
 │   └── history/
 │       └── YYYY-MM.json   # Monthly snapshots for trend tracking
 ├── scripts/
-│   └── scraper.js         # Data collection from TMDB (FlixPatrol scraping is manual)
+│   └── scraper.js         # FlixPatrol web scraper using Puppeteer
 └── assets/images/         # Static assets
 ```
 
@@ -114,19 +107,23 @@ K-Drama-top10/
 ### Data Collection Workflow
 
 1. **Monthly Update Process**:
-   - Check current Netflix K-Drama rankings (manually via FlixPatrol)
-   - Update drama titles in `scripts/scraper.js` manualTitles array
-   - Run `npm run scrape` to fetch TMDB data (posters, ratings, cast, etc.)
-   - Manually add YouTube OST video IDs to `data/current.json`
+   - Run `npm run scrape` to automatically scrape FlixPatrol for current rankings
+   - Script outputs basic data (rank, title, poster, description, Netflix URL)
+   - Manually enrich `data/current.json` with missing data (rating, episodes, director, cast, YouTube OST)
    - Calculate `rankChange` by comparing with previous month
    - Archive old `current.json` to `data/history/YYYY-MM.json`
 
 2. **scraper.js Logic**:
-   - Takes manual title list (FlixPatrol scraping needs HTML inspection)
-   - Searches TMDB for each title
-   - Fetches detailed info (cast, episodes, ratings, posters)
-   - Respects TMDB rate limits (500ms delay between requests)
-   - Outputs to `data/current.json`
+   - Uses Puppeteer to load FlixPatrol's South Korea Netflix page
+   - Extracts ranking data from HTML table structure
+   - Automatically captures: rank, title, poster image, description (if available), Netflix URL
+   - Outputs skeleton data to `data/current.json`
+   - Manual follow-up needed: rating, releaseDate, episodes, director, cast, youtubeOST
+
+3. **Important Notes**:
+   - FlixPatrol's HTML structure may change - selectors in scraper.js may need updates
+   - First run will download Chromium for Puppeteer (~300MB)
+   - Some fields (rating, cast, etc.) not available from FlixPatrol - manual entry required
 
 ## Common Development Tasks
 
@@ -137,8 +134,8 @@ Edit `data/current.json` and add:
 {
   "rank": 1,
   "title": "New Drama",
-  "tmdbId": 12345,  // Get from TMDB search
-  "poster": "https://image.tmdb.org/t/p/w500/posterPath.jpg",
+  "tmdbId": 0,  // Legacy field, no longer used
+  "poster": "https://example.com/poster.jpg",
   "description": "Drama synopsis",
   "rating": 8.5,
   "releaseDate": "2024-01-01",
@@ -185,19 +182,20 @@ cp data/current.json data/history/2024-11.json
 ## Important Notes
 
 - **No build process**: This is vanilla HTML/CSS/JS served directly
-- **TMDB images**: Uses `w500` size for posters - balanced quality/performance
-- **Rate limiting**: Scraper has 500ms delays for TMDB API
+- **Web scraping**: Uses Puppeteer for FlixPatrol - may break if site structure changes
+- **Chromium download**: First `npm install` downloads Chromium (~300MB)
+- **Manual enrichment**: Rating, cast, director must be added manually after scraping
 - **Browser compatibility**: Modern browsers only (ES6+ features)
 - **Mobile-first**: Tailwind responsive classes (sm, md, lg, xl breakpoints)
 
-## External APIs
+## External Services
 
-### TMDB API
-- **Search endpoint**: `/search/tv` for finding dramas
-- **Details endpoint**: `/tv/{id}` for full information
-- **Credits endpoint**: `/tv/{id}/credits` for cast/crew
-- **Rate limit**: 40 requests per 10 seconds (scraper respects this)
-- **Images**: Auto-served via CDN at `https://image.tmdb.org/t/p/{size}{path}`
+### FlixPatrol
+- **URL**: https://flixpatrol.com/top10/netflix/south-korea/
+- **Method**: Web scraping with Puppeteer
+- **Data extracted**: Rank, title, poster, description (partial), Netflix URL
+- **Limitations**: No ratings, cast, or episode counts - manual entry required
+- **Maintenance**: HTML selectors may need updates if FlixPatrol changes their layout
 
 ### YouTube Iframe API
 - Basic embed: `https://www.youtube.com/embed/{VIDEO_ID}`
@@ -209,5 +207,5 @@ cp data/current.json data/history/2024-11.json
 - **index.html**: Only modify for major layout changes
 - **main.js**: Core logic - be careful with data flow
 - **chart.js**: Chart config in `updateChart()` function
-- **scraper.js**: Update `manualTitles` array monthly
+- **scraper.js**: May need selector updates if FlixPatrol HTML changes
 - **data/current.json**: Primary data file - validate JSON before committing
