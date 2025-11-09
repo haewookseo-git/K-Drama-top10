@@ -1,0 +1,27 @@
+{
+  "name": "k-drama-top10",
+  "version": "1.0.0",
+  "description": "A website displaying Netflix K-Drama Top 10 rankings with detailed information and OST music",
+  "main": "index.html",
+  "scripts": {
+    "scrape": "node scripts/scraper.js",
+    "dev": "npx http-server . -p 8080 -o",
+    "test": "echo \"No tests yet\" && exit 0"
+  },
+  "keywords": [
+    "k-drama",
+    "netflix",
+    "rankings",
+    "korean-drama"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "axios": "^1.6.0",
+    "cheerio": "^1.0.0-rc.12",
+    "dotenv": "^16.3.1"
+  },
+  "devDependencies": {
+    "http-server": "^14.1.1"
+  }
+}

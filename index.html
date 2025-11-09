@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Discover the top 10 Korean dramas on Netflix with rankings, details, and OST music">
+    <title>Netflix K-Drama Top 10</title>
+
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <!-- Header -->
+    <header class="bg-white shadow-sm sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+            <div class="flex items-center justify-between">
+                <h1 class="text-3xl font-bold text-gray-900">
+                    🎬 K-Drama <span class="text-red-600">Top 10</span>
+                </h1>
+                <div class="text-sm text-gray-600">
+                    Last updated: <span id="last-updated">-</span>
+                </div>
+            </div>
+
+            <!-- Search and Filter -->
+            <div class="mt-4 flex flex-col sm:flex-row gap-3">
+                <input
+                    type="text"
+                    id="search-input"
+                    placeholder="Search dramas..."
+                    class="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
+                >
+                <select
+                    id="sort-select"
+                    class="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
+                >
+                    <option value="rank">Sort by Rank</option>
+                    <option value="rating">Sort by Rating</option>
+                    <option value="title">Sort by Title</option>
+                    <option value="date">Sort by Release Date</option>
+                </select>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <!-- Loading State -->
+        <div id="loading" class="text-center py-20">
+            <div class="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-red-600"></div>
+            <p class="mt-4 text-gray-600">Loading K-Drama rankings...</p>
+        </div>
+
+        <!-- Error State -->
+        <div id="error" class="hidden text-center py-20">
+            <p class="text-red-600 text-lg">Failed to load data. Please try again later.</p>
+        </div>
+
+        <!-- Drama Grid -->
+        <div id="drama-grid" class="hidden grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            <!-- Drama cards will be inserted here by JavaScript -->
+        </div>
+
+        <!-- Ranking History Chart Section -->
+        <section id="chart-section" class="hidden mt-12 bg-white rounded-lg shadow-md p-6">
+            <h2 class="text-2xl font-bold text-gray-900 mb-6">📊 Ranking Trends</h2>
+            <div class="mb-4">
+                <select
+                    id="chart-drama-select"
+                    class="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
+                >
+                    <option value="">Select a drama to see ranking history</option>
+                </select>
+            </div>
+            <div class="h-64">
+                <canvas id="ranking-chart"></canvas>
+            </div>
+        </section>
+    </main>
+
+    <!-- Modal for Drama Details -->
+    <div id="modal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            <div class="p-6">
+                <!-- Modal content will be inserted here by JavaScript -->
+                <div id="modal-content"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="bg-white border-t mt-16">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 text-center text-gray-600">
+            <p>Data sourced from FlixPatrol and TMDB. Updated monthly.</p>
+            <p class="mt-2 text-sm">This is an unofficial fan project and is not affiliated with Netflix.</p>
+        </div>
+    </footer>
+
+    <!-- JavaScript -->
+    <script src="js/main.js"></script>
+    <script src="js/chart.js"></script>
+    <script src="js/youtube.js"></script>
+</body>
+</html>

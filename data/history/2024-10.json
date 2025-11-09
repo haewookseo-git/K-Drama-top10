@@ -1,0 +1,56 @@
+{
+  "month": "2024-10",
+  "lastUpdated": "2024-10-31",
+  "rankings": [
+    {
+      "rank": 1,
+      "title": "The Glory",
+      "tmdbId": 136311
+    },
+    {
+      "rank": 2,
+      "title": "Squid Game",
+      "tmdbId": 93405
+    },
+    {
+      "rank": 3,
+      "title": "Crash Landing on You",
+      "tmdbId": 91542
+    },
+    {
+      "rank": 4,
+      "title": "Moving",
+      "tmdbId": 124364
+    },
+    {
+      "rank": 5,
+      "title": "Sweet Home",
+      "tmdbId": 93716
+    },
+    {
+      "rank": 6,
+      "title": "Queen of Tears",
+      "tmdbId": 194764
+    },
+    {
+      "rank": 7,
+      "title": "Extraordinary Attorney Woo",
+      "tmdbId": 197281
+    },
+    {
+      "rank": 8,
+      "title": "My Demon",
+      "tmdbId": 213713
+    },
+    {
+      "rank": 9,
+      "title": "Business Proposal",
+      "tmdbId": 152369
+    },
+    {
+      "rank": 10,
+      "title": "Vincenzo",
+      "tmdbId": 110316
+    }
+  ]
+}
